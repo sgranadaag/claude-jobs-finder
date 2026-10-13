@@ -1,0 +1,21 @@
+# Datos personales: las carpetas se mantienen en el repo (con .gitkeep), su contenido no.
+# El formato de cada archivo de docs/ está descrito en el README.
+
+# Perfil, CV, datos de contacto, preferencias, estilo y banco de respuestas
+docs/*
+!docs/.gitkeep
+
+# Histórico de ofertas, registro de postulaciones y portales
+data/*
+!data/.gitkeep
+
+# Una carpeta por oferta: CV adaptado, datos de aplicación y registros
+applications/*
+!applications/.gitkeep
+
+# Configuración local de Claude Code
+.claude/settings.local.json
+
+# Sistema
+.DS_Store
+Thumbs.db

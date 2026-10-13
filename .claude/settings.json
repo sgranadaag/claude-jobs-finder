@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch",
+      "Edit(applications/**)",
+      "Edit(data/**)",
+      "Edit(docs/preferences.md)",
+      "Edit(docs/answer-bank.md)",
+      "Bash(node .claude/scripts/build-cv.mjs:*)",
+      "PowerShell(node .claude/scripts/build-cv.mjs *)",
+      "mcp__claude-in-chrome"
+    ]
+  }
+}
