@@ -1,61 +1,40 @@
 ---
 name: apply
-description: Applies to offers in "prepared" (or "draft") status using the browser, filling the forms with the generated data and the answer bank, and recording what was sent and the result. Use only when the user asks to apply (step 3 of the workflow).
-argument-hint: "[space-separated IDs | empty = all prepared] [no-submit]"
+description: Applies to recorded offers by launching one job-applier subagent per offer in parallel - each one tailors the CV (tailor-cv skill), fills the form in the browser and stops before submitting - then relays the user's confirmation, records the results and cleans up. Use only when the user asks to apply (step 2 of the workflow).
+argument-hint: "[space-separated IDs | minimum score, default 50] [no-submit]"
 disable-model-invocation: true
 ---
 
-Step 3 of the workflow (see `CLAUDE.md`). It runs in the main session (not in a subagent) because it needs the browser, the user's sessions and their confirmation.
+Step 2 of the workflow (see `CLAUDE.md`). You orchestrate; each `job-applier` subagent handles one offer end to end. Only you talk to the user and only you edit the shared files (`data/offers.md`, `data/applications.md`, `docs/answer-bank.md`, `docs/preferences.md`).
 
 ## Preparation
 
-1. Read `data/offers.md` and take the offers given in `$ARGUMENTS`, or all offers with status `prepared`. Show them sorted by score and confirm with the user which ones to apply to. If `$ARGUMENTS` says "no-submit", fill everything and leave each application as a draft.
-2. Read `docs/answer-bank.md`, `docs/writing-style.md` ("Form answers" section) and `docs/preferences.md` ("Reusable answers" and salary).
-3. Load the available browser skill (Claude in Chrome, or else the built-in browser) before the first browser action.
+1. Read `data/offers.md` and pick the offers:
+   - If `$ARGUMENTS` has IDs, those.
+   - If it has a number, the `new`, `prepared` or `draft` offers with score ≥ that number.
+   - If it is empty, the `new`, `prepared` or `draft` offers with score ≥ 50.
+   Show them sorted by score and confirm with the user which ones to apply to. If there are none, say so and stop. If `$ARGUMENTS` says "no-submit", the run ends at the review step and every application stays as a draft.
+2. Check the Claude in Chrome extension is connected (`tabs_context_mcp`) before launching anything; if it isn't, ask the user to connect it.
 
-## For each offer
+## Run
 
-1. Read `applications/<ID>/application.md` (CV, salary, "why?", cover letter, pending items) and `offer.md` (requirements table). Contact data lives in "Contact" in `docs/profile.md`. ID documents and other sensitive data are not stored in any file: if the form requires them, ask the user at that moment and don't record them in the log. If there are pending items the form will ask for, ask the user before starting.
-2. Open the offer URL and get to the form (Apply / Easy Apply / external ATS such as Greenhouse, Lever, Ashby, Workable).
-3. If it asks for login, account creation, captcha or email verification: **stop and ask the user to do it**. Don't create accounts without permission.
-4. Read **all** the form questions before answering any of them. Then:
-   - Map each question to the `docs/answer-bank.md` topics that fit it and **spread the material so nothing repeats**: the same project, achievement or certification never appears in two answers ("why this company?" and the cover letter count too).
-   - Adapt each base answer to the question, without adding facts. Answer in the offer's language. If it asks for a transferable technology, use the "Equivalent technology" pattern; if there is no basis, "No similar basis".
-   - Salary (gross or net): the value in `application.md`.
-   - Questions that depend on the user and are not in the docs or in "Reusable answers": ask the user; never assume.
-   - Optional demographic questions: blank or "Prefer not to say".
-5. Upload `applications/<ID>/<Name>_CV_<Company>.pdf` (without updating the board's profile with that CV or setting it as default). If the browser can't upload files, ask the user to upload it and give them the absolute path.
-6. **Before submitting**: show the user a summary of every field and answer and wait for their explicit confirmation. Nothing is sent without it. In "no-submit" mode, leave the application in preview or as a draft.
-7. Submit and capture the result (confirmation message, reference number, error).
-8. If you wrote a new answer that will be useful for other offers, or the user corrected one, add or update it in `docs/answer-bank.md`. If the user provided new personal data (salary, previous processes, etc.), add it to "Reusable answers" in `docs/preferences.md`.
+3. Launch one `job-applier` subagent per offer, passing the ID (and "no-submit" if set). Launch them in parallel, in batches of up to 4 (they share the user's browser, one tab each).
+4. Handle each report as it arrives:
+   - `READY_TO_SUBMIT` → show the user the field summary for that offer and wait for explicit confirmation. Confirmed → resume that same agent (SendMessage to its ID) with "confirmed" plus any corrections. Not confirmed → resume it with the corrections, or tell it to leave the application as a draft. In "no-submit" mode, don't ask: record it as `draft`.
+   - `BLOCKED` → tell the user what is needed (login, captcha, CV upload, pending questions). When they are done or answer, resume the same agent with that.
+   - `APPLIED` / `FAILED` / `SKIPPED` → record it (next section).
+   - The user says they submitted it themselves → check the agent's tab for the board's confirmation, tell the agent (if still running) to stop touching the form, log the result and close its tab, and record it as `applied`.
+   ID documents and other sensitive data the user gives are relayed to the agent only, never written to any file.
+5. Record each finished offer:
+   - Update its status in `data/offers.md` (`applied`, `draft`, `failed` or `skipped`, with the reason, coverage and declared salary in Notes).
+   - Add a row to `data/applications.md` (if it doesn't exist, create it by copying `.claude/templates/data/applications.md`).
+   - Apply the agent's proposed additions to `docs/answer-bank.md` and to "Reusable answers" in `docs/preferences.md`, merging duplicates across agents. Save answers the user gives in chat there as soon as they give them.
+   - Company cooldown: once an offer is `applied`, mark any other `new` / `prepared` offer from the same company as `discarded` (cooldown, with the blocking ID and date in Notes) and remove its `applications/<ID>/` folder. Don't launch two agents for the same company in one run.
 
-## Log (always, even if it fails, is skipped or stays as a draft)
+## Cleanup (after every offer in the run has finished)
 
-Create or extend `applications/<ID>/application-log.md`:
+For every offer processed in this run whose final status is **not** `applied` (`skipped`, `blocked`, `failed`, or an unsent `draft`), delete its entire `applications/<ID>/` folder. Only offers that were actually submitted keep their folder — `applications/` only ever holds successfully-applied offers. In "no-submit" mode, keep the `draft` folders (the user will come back to them).
 
-```markdown
-## Attempt <YYYY-MM-DD HH:mm>
-- URL / platform: ...
-- Result: applied | draft | blocked | failed | skipped
-- Confirmation / reference: ...
-- CV: <file> (name it has on the board)
-- Declared salary: <value>
-- Fields:
-  | Field | Value |
-  |---|---|
-- Screening questions (literal question text and the answer sent, in full):
-  1. **<question exactly as it appears>**
-     <answer>
-- Data provided by the user: ...
-- Issues: ...
-```
+The row in `data/offers.md` is never deleted (it's the permanent history); note in its Notes column that the folder was removed and that the CV would need to be rebuilt if the offer becomes viable again later (e.g. after a platform cooldown like Proxify's).
 
-Then add a row to `data/applications.md` (if it doesn't exist, create it by copying `.claude/templates/data/applications.md`) and update the status in `data/offers.md` (`applied`, `draft`, `failed` or `skipped`, with the reason in Notes).
-
-## Cleanup (end of the run, after every offer in this batch has been attempted)
-
-For every offer processed in this run whose final status is **not** `applied` (`skipped`, `blocked`, `failed`, or left as an unsent `draft`), delete its entire `applications/<ID>/` folder (offer.md, cv.md, application.md, application-log.md, PDF). Only offers that were actually submitted keep their folder — the goal is that `applications/` only ever holds successfully-applied offers.
-
-The row in `data/offers.md` is never deleted (it's the permanent history); just note in its Notes column that the folder was removed and that `/tailor-cv` would need to rebuild it from scratch if the offer becomes viable again later (e.g. after a platform cooldown like Proxify's).
-
-At the end, show a summary of all the applications of the session.
+At the end, show a summary of all the applications of the run.

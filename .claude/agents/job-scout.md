@@ -71,7 +71,7 @@ Mandatory coverage: (<covered> + 0.8 × <transferable> + 0.5 × <partial>) / <to
 <full copy of the offer description, not summarized>
 ```
 
-This is the **only** requirements table for the offer: the score comes from it, then `cv-tailor` refines it and the salary comes from it. `Status` values: `covered` (work experience), `transferable: <equivalent>` (counts 0.8), `personal project only` or `training only` (count 0.5), `no basis`. Use those same values for the requirement points of the score.
+This is the **only** requirements table for the offer: the score comes from it, then the `tailor-cv` skill refines it and the salary comes from it. `Status` values: `covered` (work experience), `transferable: <equivalent>` (counts 0.8), `personal project only` or `training only` (count 0.5), `no basis`. Use those same values for the requirement points of the score.
 
 If the score is **< 50**, skip the folder entirely — don't write `applications/<ID>/offer.md` for it.
 

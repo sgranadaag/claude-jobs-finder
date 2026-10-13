@@ -4,8 +4,8 @@ A personal [Claude Code](https://claude.com/claude-code) workflow to find softwa
 
 ```
 /find-jobs [amount] [focus]           → searches, scores and records new offers
-/tailor-cv [IDs | minimum score]      → builds the CV and application data per offer
-/apply [IDs] [no-submit]              → fills the forms in Chrome and records the result
+/apply [IDs | minimum score] [no-submit] → one job-applier per offer: CV + form in Chrome, then records the result
+/tailor-cv <ID>                       → builds the CV and application data for one offer, without applying
 ```
 
 > Personal data (`docs/`), history (`data/`) and applications (`applications/`) are **not committed** (see `.gitignore`); only their folders are. To use the workflow, create the files following [`docs/` format](#docs-format) and [`data/` format](#data-format).
@@ -22,21 +22,19 @@ A personal [Claude Code](https://claude.com/claude-code) workflow to find softwa
                                applications/<id>/offer.md (offer + score + requirements)
    │
    ▼
- 2. /tailor-cv ── cv-tailor ──► applications/<id>/cv.md ─► .claude/scripts/build-cv.mjs ─► PDF
-                  (one per      applications/<id>/application.md (salary, why, cover letter)
-                   offer)
-   │
-   ▼
- 3. /apply ── main session + Chrome ──► job board form
-                                       applications/<id>/application-log.md
-                                       data/applications.md
+ 2. /apply ── job-applier (one per offer, own Chrome tab)
+      │         ├─ reads the posting and the form
+      │         ├─ tailor-cv skill ──► applications/<id>/cv.md ─► build-cv.mjs ─► PDF
+      │         │                      applications/<id>/application.md (salary, why, cover letter)
+      │         ├─ fills the form, stops before submitting ──► applications/<id>/application-log.md
+      │         └─ submits after the user confirms
+      └─ main session: confirmations, data/offers.md, data/applications.md, answer bank
 ```
 
 | Step | Who does it | Why this way |
 |---|---|---|
 | 1. Search | `job-scout` subagent | Browses many pages; isolating it keeps the main session's context clean |
-| 2. Prepare | `cv-tailor` subagent, one per offer, in parallel | Each offer is independent and benefits from a clean context |
-| 3. Apply | The main session with Claude in Chrome | Uses the user's browser sessions and needs their input (login, captcha, questions not answered by the docs, confirmation before submitting) |
+| 2. Apply | `job-applier` subagent, one per offer, in parallel; orchestrated by the main session | Each offer is independent and benefits from a clean context. The main session relays the user's input (login, captcha, questions not answered by the docs, confirmation before submitting) |
 
 ### 1. `job-scout` — search and scoring
 
@@ -60,7 +58,9 @@ A personal [Claude Code](https://claude.com/claude-code) workflow to find softwa
 
 6. For each offer it creates `applications/<id>/offer.md`, with the offer's **only requirements table**, and adds a row to `data/offers.md`.
 
-### 2. `cv-tailor` — CV and application data
+### 2a. `tailor-cv` skill — CV and application data
+
+Run by `job-applier` once it has read the offer and the form (or directly with `/tailor-cv <ID>`).
 
 1. **Refines the requirements table.** Assigns each requirement a status:
 
@@ -81,15 +81,15 @@ A personal [Claude Code](https://claude.com/claude-code) workflow to find softwa
    - Pending items.
 5. **Self-checks sentence by sentence** against `docs/profile.md`.
 
-### 3. `/apply` — fill and submit
+### 2b. `job-applier` — fill and submit
 
-1. Opens the offer in Chrome with the user's sessions and gets to the form.
+1. Opens the offer in its own Chrome tab with the user's sessions and gets to the form. If the posting no longer fits (closed, country, on-site), it skips it.
 2. Reads **all** the questions, then answers them:
    - Starts from `docs/answer-bank.md` and spreads the material so nothing repeats within the same application.
    - Follows the rules in `docs/writing-style.md`: natural tone, never "0 years" and no dates per technology.
 3. Uploads the offer's PDF without replacing the CV in the board's profile.
-4. **Never submits without the user's confirmation.** With `no-submit`, the application stays as a draft on the board.
-5. Records the literal questions with their answers in `application-log.md`. Adds new answers to the bank and any data the user provides to `preferences.md`.
+4. **Never submits without the user's confirmation**: it stops and reports to `/apply`, which asks the user and resumes it. Login, captcha or missing data work the same way. With `no-submit`, the application stays as a draft on the board.
+5. Records the literal questions with their answers in `application-log.md` and proposes new answers; `/apply` adds them to the bank and any data the user provides to `preferences.md`, and updates `data/`.
 
 ### Offer status (`data/offers.md`)
 
@@ -106,15 +106,15 @@ A personal [Claude Code](https://claude.com/claude-code) workflow to find softwa
 1. **Nothing is invented.** No skills, years, roles, metrics or answers. Reordering, selecting, omitting, rephrasing and translating what is already in `docs/` is allowed.
 2. Transferable technologies count for score and salary, but are **never claimed**: "I haven't worked with Angular, but I have with React…".
 3. Nothing is submitted without explicit confirmation.
-4. Only the main session edits `data/offers.md`; parallel subagents don't touch it.
+4. Only the main session edits `data/` and the shared `docs/` files; parallel subagents only write inside their own `applications/<id>/` folder.
 5. ID documents are not stored in any file; if a form asks for one, the user is asked at that moment.
 
 ## Structure
 
 ```
 .claude/                                everything in Claude Code's domain
-  agents/job-scout.md, cv-tailor.md     subagents
-  skills/find-jobs, tailor-cv, apply    /find-jobs, /tailor-cv, /apply commands
+  agents/job-scout.md, job-applier.md   subagents
+  skills/find-jobs, apply, tailor-cv    /find-jobs, /apply commands; tailor-cv is used by job-applier
   scripts/build-cv.mjs                  cv.md → HTML → PDF (headless Edge)
   templates/
     cv.html                             CV style (replica of the original CV)

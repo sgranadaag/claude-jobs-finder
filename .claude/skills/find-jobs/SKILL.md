@@ -11,4 +11,4 @@ Step 1 of the workflow (see `CLAUDE.md`).
    - Additional focus, if `$ARGUMENTS` mentions one (role, technology or specific board).
    - Reminder: read `data/offers.md` first and don't repeat anything already in it.
 2. When it finishes, show the user its summary: table of new offers sorted by score and count of discarded offers by reason.
-3. Offer to continue with `/tailor-cv` for the high and medium priority ones (score ≥ 50).
+3. Offer to continue with `/apply` for the high and medium priority ones (score ≥ 50).
