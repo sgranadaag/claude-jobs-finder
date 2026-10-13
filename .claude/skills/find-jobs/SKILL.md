@@ -1,14 +1,14 @@
 ---
 name: find-jobs
-description: Busca ofertas de empleo nuevas que encajen con el perfil, las puntúa y las registra en el histórico. Usar cuando el usuario quiera buscar ofertas o ejecutar el paso 1 del workflow.
-argument-hint: "[cantidad] [enfoque opcional, ej. 'solo backend' o 'Get on Board']"
+description: Searches for new job offers that fit the profile, scores them and records them in the history. Use when the user wants to search for offers or to run step 1 of the workflow.
+argument-hint: "[amount] [optional focus, e.g. 'backend only' or 'Get on Board']"
 ---
 
-Paso 1 del workflow (ver `CLAUDE.md`).
+Step 1 of the workflow (see `CLAUDE.md`).
 
-1. Lanza el subagente `job-scout` con este encargo:
-   - Cantidad objetivo de ofertas nuevas: la que indique `$ARGUMENTS`, o 15 por defecto.
-   - Enfoque adicional, si `$ARGUMENTS` lo menciona (rol, tecnología o portal concreto).
-   - Recordatorio: leer primero `data/offers.md` y no repetir nada que ya esté ahí.
-2. Cuando termine, muestra al usuario su resumen: tabla de ofertas nuevas ordenadas por score y conteo de descartadas por motivo.
-3. Ofrece continuar con `/tailor-cv` para las de prioridad alta y media (score ≥ 60).
+1. Launch the `job-scout` subagent with this assignment:
+   - Target number of new offers: the one given in `$ARGUMENTS`, or 15 by default.
+   - Additional focus, if `$ARGUMENTS` mentions one (role, technology or specific board).
+   - Reminder: read `data/offers.md` first and don't repeat anything already in it.
+2. When it finishes, show the user its summary: table of new offers sorted by score and count of discarded offers by reason.
+3. Offer to continue with `/tailor-cv` for the high and medium priority ones (score ≥ 60).

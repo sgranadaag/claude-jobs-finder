@@ -1,304 +1,339 @@
 # jobs-finder
 
-Workflow personal de [Claude Code](https://claude.com/claude-code) para buscar ofertas de software engineering, adaptar el CV a cada una **sin inventar nada** y dejar las postulaciones llenas en el portal.
+A personal [Claude Code](https://claude.com/claude-code) workflow to find software engineering job offers, tailor the CV to each one **without inventing anything**, and leave the applications filled in on the job board.
 
 ```
-/find-jobs [cantidad] [enfoque]       → busca, puntúa y registra ofertas nuevas
-/tailor-cv [IDs | score mínimo]       → genera el CV y los datos de aplicación por oferta
-/apply [IDs] [sin enviar]             → llena los formularios en Chrome y registra el resultado
+/find-jobs [amount] [focus]           → searches, scores and records new offers
+/tailor-cv [IDs | minimum score]      → builds the CV and application data per offer
+/apply [IDs] [no-submit]              → fills the forms in Chrome and records the result
 ```
 
-> Los datos personales (`docs/`), el histórico (`data/`) y las postulaciones (`applications/`) **no se suben al repo** (ver `.gitignore`); solo se versionan sus carpetas. Para usarlo hay que crear los archivos con los formatos de [Formato de `docs/`](#formato-de-docs) y [Formato de `data/`](#formato-de-data).
+> Personal data (`docs/`), history (`data/`) and applications (`applications/`) are **not committed** (see `.gitignore`); only their folders are. To use the workflow, create the files following [`docs/` format](#docs-format) and [`data/` format](#data-format).
 
-## Flujo de trabajo
+**Language.** The project runs in English: agents, skills, rules, formats and status values. What goes to an employer follows the offer's language — a Spanish offer gets a Spanish CV, cover letter and answers.
+
+## Workflow
 
 ```
- docs/ (perfil, CV, preferencias)
+ docs/ (profile, CV, preferences)
    │
    ▼
- 1. /find-jobs ── job-scout ──► data/offers.md          (histórico, sin repetidos)
-                               applications/<id>/offer.md (oferta + score + requisitos)
+ 1. /find-jobs ── job-scout ──► data/offers.md              (history, no repeats)
+                               applications/<id>/offer.md (offer + score + requirements)
    │
    ▼
  2. /tailor-cv ── cv-tailor ──► applications/<id>/cv.md ─► .claude/scripts/build-cv.mjs ─► PDF
-                  (uno por      applications/<id>/application.md (salario, por qué, carta)
-                   oferta)
+                  (one per      applications/<id>/application.md (salary, why, cover letter)
+                   offer)
    │
    ▼
- 3. /apply ── sesión principal + Chrome ──► formulario del portal
-                                          applications/<id>/application-log.md
-                                          data/applications.md
+ 3. /apply ── main session + Chrome ──► job board form
+                                       applications/<id>/application-log.md
+                                       data/applications.md
 ```
 
-| Paso | Quién lo hace | Por qué así |
+| Step | Who does it | Why this way |
 |---|---|---|
-| 1. Buscar | Subagente `job-scout` | Navega muchas páginas; aislarlo evita llenar el contexto de la sesión principal |
-| 2. Preparar | Subagente `cv-tailor`, uno por oferta y en paralelo | Cada oferta es independiente y se beneficia de un contexto limpio |
-| 3. Aplicar | La sesión principal con Claude in Chrome | Usa las sesiones del navegador del usuario y necesita su intervención (login, captcha, preguntas sin respuesta en los docs, confirmación antes de enviar) |
+| 1. Search | `job-scout` subagent | Browses many pages; isolating it keeps the main session's context clean |
+| 2. Prepare | `cv-tailor` subagent, one per offer, in parallel | Each offer is independent and benefits from a clean context |
+| 3. Apply | The main session with Claude in Chrome | Uses the user's browser sessions and needs their input (login, captcha, questions not answered by the docs, confirmation before submitting) |
 
-### 1. `job-scout` — búsqueda y score
+### 1. `job-scout` — search and scoring
 
-1. Lee el perfil, las preferencias y `data/offers.md`. Nada que ya esté en el histórico (en cualquier estado) se vuelve a listar.
-2. Recorre los portales de `data/sources.md` combinando los roles objetivo con las tecnologías fuertes del perfil.
-3. **Cómo extrae los datos:**
-   - Usa la API o el RSS del portal cuando existe (Remote OK, Remotive, We Work Remotely).
-   - Si no, abre el listado con WebFetch (Get on Board, Himalayas…).
-   - Si el portal bloquea el acceso directo, como LinkedIn o Wellfound, busca con `site:` en WebSearch.
-   - De cada candidata abre la página de la oferta y copia la descripción **íntegra**. Nunca puntúa con solo el título.
-   - Cuando un portal falla o cambia de URL, lo anota en `data/sources.md` para la próxima búsqueda.
-4. Aplica los filtros duros de `docs/preferences.md`: remoto desde tu país, salario mínimo, antigüedad máxima y que sea del sector. Las ofertas que no pasan quedan `descartada`, con el motivo.
-5. Calcula el score con la rúbrica de `docs/preferences.md`:
+1. Reads the profile, the preferences and `data/offers.md`. Nothing already in the history (in any status) is listed again.
+2. Goes through the boards in `data/sources.md`, combining the target roles with the profile's main technologies.
+3. **How it extracts the data:**
+   - Uses the board's API or RSS when there is one (Remote OK, Remotive, We Work Remotely).
+   - Otherwise fetches the listing with WebFetch (Get on Board, Himalayas…).
+   - If the board blocks direct access, like LinkedIn or Wellfound, it searches with `site:` in WebSearch.
+   - For each candidate it opens the offer page and copies the **full** description. It never scores from the title alone.
+   - When a board fails or changes its URLs, it notes that in `data/sources.md` for the next search.
+4. Applies the hard filters from `docs/preferences.md`: remote from your country, minimum salary, maximum age and in-sector. Offers that fail are marked `discarded`, with the reason.
+5. Computes the score with the rubric in `docs/preferences.md`:
 
-   | Criterio | Peso |
+   | Criterion | Weight |
    |---|---|
-   | Requisitos | 45 |
-   | Salario | 30 |
-   | Recencia | 15 |
-   | Región de la empresa | 10 |
+   | Requirements | 45 |
+   | Salary | 30 |
+   | Recency | 15 |
+   | Company region | 10 |
 
-6. Por cada oferta crea `applications/<id>/offer.md`, con la **única tabla de requisitos** de la oferta, y agrega una fila a `data/offers.md`.
+6. For each offer it creates `applications/<id>/offer.md`, with the offer's **only requirements table**, and adds a row to `data/offers.md`.
 
-### 2. `cv-tailor` — CV y datos de aplicación
+### 2. `cv-tailor` — CV and application data
 
-1. **Afina la tabla de requisitos.** Le asigna a cada requisito un estado:
+1. **Refines the requirements table.** Assigns each requirement a status:
 
-   | Estado | Cuenta como |
+   | Status | Counts as |
    |---|---|
-   | `cubierto` | 1 |
-   | `transferible: <equivalente>` | 1 |
-   | `solo proyecto personal` / `solo formación` | 0.5 |
-   | `sin base` | 0 |
+   | `covered` | 1 |
+   | `transferable: <equivalent>` | 0.8 |
+   | `personal project only` / `training only` | 0.5 |
+   | `no basis` | 0 |
 
-   Si piden Angular y el perfil tiene React, el requisito es transferible y cuenta como cubierto.
-2. **Escribe `cv.md`.** Parte del CV original en el idioma de la oferta y solo reordena, recorta y reformula. El formato visual lo pone el script, que replica el CV original.
-3. **Genera el PDF** con `node .claude/scripts/build-cv.mjs <id>`.
-4. **Escribe `application.md`**, que es corto:
-   - Salario calculado: lo que ofrece la empresa o el objetivo, ajustado por la cobertura de requisitos.
-   - "¿Por qué este rol?" y "¿por qué esta empresa?".
-   - La carta.
-   - Los pendientes.
-5. **Se autoverifica frase por frase** contra `docs/profile.md`.
+   Missing the exact technology doesn't zero the requirement: if the offer asks for Angular and the profile has React, it is transferable and counts only 20% less than React would. The same coverage drives both the score and the salary.
+2. **Writes `cv.md`.** Starts from the original CV in the offer's language and only reorders, trims and rephrases. The visual format comes from the script, which replicates the original CV.
+3. **Builds the PDF** with `node .claude/scripts/build-cv.mjs <id>`.
+4. **Writes `application.md`**, which is short:
+   - Computed salary: what the company offers or the target, adjusted by requirement coverage.
+   - "Why this role?" and "why this company?".
+   - The cover letter.
+   - Pending items.
+5. **Self-checks sentence by sentence** against `docs/profile.md`.
 
-### 3. `/apply` — llenar y enviar
+### 3. `/apply` — fill and submit
 
-1. Abre la oferta en Chrome con las sesiones del usuario y llega al formulario.
-2. Lee **todas** las preguntas y luego las responde:
-   - Parte de `docs/answer-bank.md` y reparte el material para no repetir nada en la misma postulación.
-   - Usa las reglas de `docs/writing-style.md`: tono natural, nunca "0 años" y sin fechas por tecnología.
-3. Sube el PDF de la oferta sin reemplazar el CV del perfil del portal.
-4. **No envía sin confirmación del usuario.** Con `sin enviar`, la postulación queda como borrador en el portal.
-5. Registra en `application-log.md` las preguntas literales con su respuesta. Agrega al banco las respuestas nuevas y a `preferences.md` los datos que aporte el usuario.
+1. Opens the offer in Chrome with the user's sessions and gets to the form.
+2. Reads **all** the questions, then answers them:
+   - Starts from `docs/answer-bank.md` and spreads the material so nothing repeats within the same application.
+   - Follows the rules in `docs/writing-style.md`: natural tone, never "0 years" and no dates per technology.
+3. Uploads the offer's PDF without replacing the CV in the board's profile.
+4. **Never submits without the user's confirmation.** With `no-submit`, the application stays as a draft on the board.
+5. Records the literal questions with their answers in `application-log.md`. Adds new answers to the bank and any data the user provides to `preferences.md`.
 
-### Estados de una oferta (`data/offers.md`)
+### Offer status (`data/offers.md`)
 
-| Estado | Significado |
+| Status | Meaning |
 |---|---|
-| `descartada` | No pasa los filtros duros; solo sirve para no repetirla |
-| `nueva` | Listada por el scout |
-| `preparada` | Tiene CV y `application.md` |
-| `borrador` | Formulario lleno y guardado en el portal, sin enviar |
-| `aplicada` / `fallida` / `omitida` | Resultado de `/apply` |
+| `discarded` | Fails the hard filters; kept only to avoid repeating it |
+| `new` | Listed by the scout |
+| `prepared` | Has a CV and `application.md` |
+| `draft` | Form filled and saved on the board, not submitted |
+| `applied` / `failed` / `skipped` | Result of `/apply` |
 
-## Reglas
+## Rules
 
-1. **No se inventa nada.** Ni skills, ni años, ni cargos, ni métricas, ni respuestas. Se permite reordenar, seleccionar, omitir, reformular y traducir lo que ya está en `docs/`.
-2. Las tecnologías transferibles cuentan para el score y el salario, pero **nunca se afirman**: "No he trabajado con Angular, pero sí con React…".
-3. Nada se envía sin confirmación explícita.
-4. Solo la sesión principal edita `data/offers.md`; los subagentes en paralelo no lo tocan.
+1. **Nothing is invented.** No skills, years, roles, metrics or answers. Reordering, selecting, omitting, rephrasing and translating what is already in `docs/` is allowed.
+2. Transferable technologies count for score and salary, but are **never claimed**: "I haven't worked with Angular, but I have with React…".
+3. Nothing is submitted without explicit confirmation.
+4. Only the main session edits `data/offers.md`; parallel subagents don't touch it.
+5. ID documents are not stored in any file; if a form asks for one, the user is asked at that moment.
 
-## Estructura
+## Structure
 
 ```
-.claude/                                todo lo del dominio de Claude Code
-  agents/job-scout.md, cv-tailor.md     subagentes
-  skills/find-jobs, tailor-cv, apply    comandos /find-jobs, /tailor-cv, /apply
-  scripts/build-cv.mjs                  cv.md → HTML → PDF (Edge headless)
+.claude/                                everything in Claude Code's domain
+  agents/job-scout.md, cv-tailor.md     subagents
+  skills/find-jobs, tailor-cv, apply    /find-jobs, /tailor-cv, /apply commands
+  scripts/build-cv.mjs                  cv.md → HTML → PDF (headless Edge)
   templates/
-    cv.html                             estilo del CV (réplica del CV original)
-    data/                               plantillas de sources.md, offers.md y applications.md
-  settings.json                         permisos pre-autorizados
-CLAUDE.md                               instrucciones del proyecto para Claude
-docs/                 (no versionado)   datos personales — ver formato abajo
-data/                 (no versionado)   ver formato abajo
-  sources.md                            portales y cómo acceder a cada uno
-  offers.md                             histórico de ofertas
-  applications.md                       registro global de postulaciones
-applications/         (no versionado)   una carpeta por oferta:
-  <fuente>-<YYYYMMDD>-<vacante>/
-    offer.md                            oferta íntegra, score y tabla de requisitos
-    cv.md                               contenido del CV adaptado
-    <Nombre>_CV_<Empresa>.pdf           CV final
-    application.md                      salario, "¿por qué?", carta, pendientes
-    application-log.md                  campos, preguntas literales y resultado
+    cv.html                             CV style (replica of the original CV)
+    data/                               templates for sources.md, offers.md and applications.md
+  settings.json                         pre-authorized permissions
+CLAUDE.md                               project instructions for Claude
+docs/                 (not versioned)   personal data — see format below
+data/                 (not versioned)   see format below
+  sources.md                            job boards and how to access each one
+  offers.md                             offer history
+  applications.md                       global application log
+applications/         (not versioned)   one folder per offer:
+  <source>-<YYYYMMDD>-<role>/
+    offer.md                            full offer, score and requirements table
+    cv.md                               tailored CV content
+    <Name>_CV_<Company>.pdf             final CV
+    application.md                      salary, "why?", cover letter, pending items
+    application-log.md                  fields, literal questions and result
 ```
 
-## Requisitos
+## Requirements
 
-- Claude Code, con Claude in Chrome conectado para `/apply` (`claude --chrome`).
-- Node.js 18 o superior.
-- Microsoft Edge, que se usa en modo headless para generar el PDF.
-  - Ruta esperada: `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`.
-  - Si está en otra ruta, se ajusta en `.claude/scripts/build-cv.mjs`.
+- Claude Code, with Claude in Chrome connected for `/apply` (`claude --chrome`).
+- Node.js 18 or later.
+- Microsoft Edge, used in headless mode to build the PDF.
+  - Expected path: `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`.
+  - If it lives elsewhere, adjust it in `.claude/scripts/build-cv.mjs`.
 
-## Formato de `docs/`
+## Getting started — initial data
 
-Crea estos archivos. Todos son Markdown, salvo los PDF del CV. Los agentes **solo** pueden usar los hechos que aparezcan aquí.
+Claude builds its whole knowledge base from what you put in **`docs/`**. Nothing outside that folder is used to describe you, and nothing in it is committed.
 
-### `docs/CV ATS Format EN.pdf` y `docs/CV ATS Format ES.pdf`
+### What you provide (in `docs/`)
 
-- Son tu CV original en inglés y en español.
-- Definen la redacción base y el formato visual que replica `.claude/templates/cv.html`.
+| File | Required | Content |
+|---|---|---|
+| `docs/CV ATS Format EN.pdf` | Yes | Your current CV in English. It is the source of every fact (roles, dates, achievements, skills) and of the visual format of the generated CVs |
+| `docs/CV ATS Format ES.pdf` | If you apply to Spanish offers | The same CV in Spanish. Spanish offers start from its wording instead of a translation |
+| `docs/info.md` (or any notes file) | Yes | Your data, in free text: full name, email, phone, city and country, LinkedIn and GitHub URLs, a short professional description, and your search preferences (target roles, target and minimum salary, work mode, countries you can be hired from, availability / notice period, accepted contract types) |
+| Links to texts you wrote | Optional | READMEs, posts or articles of yours. Claude extracts your writing style from them so cover letters and answers sound like you |
+| Certifications and side projects | Optional | Name, issuer, date and verification URL; project name, URL and a one-line description |
 
-### `docs/profile.md` — fuente de verdad
+> **Don't put ID documents** (national ID, passport) or passwords in any file. If a form asks for an ID number, `/apply` asks you at that moment and doesn't store it.
 
-Es una transcripción fiel del CV, más los proyectos y certificaciones. Si algo cambia en tu carrera, se actualiza aquí primero.
+### What Claude builds from it
+
+Ask Claude something like *"build my base from docs/"*. It then:
+
+1. Transcribes the CV faithfully into `docs/profile.md` (the source of truth) and adds your contact data, certifications and projects. If the English and Spanish CVs disagree (e.g. a date), it asks you which one is right and leaves a note.
+2. Writes `docs/preferences.md` with your targets, the salary rules, the hard filters and the scoring rubric.
+3. Writes `docs/writing-style.md` from the texts you linked.
+4. Seeds `docs/answer-bank.md` with base answers built only from `profile.md`.
+5. Copies the `data/` templates (`.claude/templates/data/`).
+
+**Review `docs/profile.md` before the first `/find-jobs`**: everything the agents say about you comes from it. After that, the notes file (`docs/info.md`) is no longer needed and can be deleted.
+
+## `docs/` format
+
+These are the files Claude ends up with (you can also write them yourself). All are Markdown except the CV PDFs. The agents can **only** use facts that appear here.
+
+### `docs/CV ATS Format EN.pdf` and `docs/CV ATS Format ES.pdf`
+
+- Your original CV in English and in Spanish.
+- They define the base wording and the visual format replicated by `.claude/templates/cv.html`.
+
+### `docs/profile.md` — source of truth
+
+A faithful transcription of the CV, plus projects and certifications. When something changes in your career, update it here first.
 
 ```markdown
-# Perfil — fuente de verdad
+# Profile — source of truth
 
-## Contacto
-- Name: <nombre completo>
+## Contact
+- Name: <full name>
 - Email: <email>
-- Phone: <teléfono con indicativo>
-- Location: <ciudad, país>
+- Phone: <phone with country code>
+- Location: <city, country>
 - Work mode: Remote
 - LinkedIn: <url>
 - GitHub: <url>
 
 ## Career Summary (CV)
-<párrafo del CV original>
+<paragraph from the original CV>
 
-## Descripción corta (ES)
-<párrafos de presentación en español>
+## Short description (ES)
+<introduction paragraphs in Spanish, used for Spanish offers>
 
 ## Summary of Qualifications — Proficient in
-<lista separada por comas, tal cual en el CV>
+<comma-separated list, exactly as in the CV>
 
-Otras tecnologías mencionadas en la experiencia: <lista>
+Other technologies mentioned in the experience: <list>
 
 ## Languages
-- <idioma> — <nivel>
-- English — <nivel>
+- <language> — <level>
 
 ## Career History
 
-### <Empresa> — <Ciudad>, <País>
-**<Cargo> — <Equipo, si aplica>** · <Mes. AAAA> – <Mes. AAAA | Present>
+### <Company> — <City>, <Country>
+**<Role> — <Team, if any>** · <Mon. YYYY> – <Mon. YYYY | Present>
 
-<párrafos del CV, sin cambiar cifras>
+<paragraphs from the CV, without changing figures>
 
-Skills: <skills del cargo>
+Skills: <role skills>
 
 ## Leadership
-### <Empresa> — <Ciudad>, <País> · <fechas>
-<párrafos>
+### <Company> — <City>, <Country> · <dates>
+<paragraphs>
 
 Skills: <...>
 
 ## Open-source projects
-- **<nombre>** — <url> — <descripción>. Tech: <...>
+- **<name>** — <url> — <description>. Tech: <...>
 
 ## Certifications
-- **<nombre>** — <emisor> · Issued <Mes. AAAA> — <url de verificación>
-  - <aprendizajes confirmados, marcados como formación>
+- **<name>** — <issuer> · Issued <Mon. YYYY> — <verification url>
+  - <confirmed learnings, marked as training>
 
 ## Education
-- **<Institución>** — <Ciudad, País> · <fechas> — <título>
+- **<Institution>** — <City, Country> · <dates> — <degree>
 ```
 
-> Si hay diferencias entre el CV en inglés y el CV en español, por ejemplo en una fecha, se deja una nota aclarando cuál es la correcta.
+> If the English and Spanish CVs differ, for example in a date, leave a note stating which one is correct.
 
-### `docs/preferences.md` — búsqueda, salario y respuestas personales
+### `docs/preferences.md` — search, salary and personal answers
 
 ```markdown
-# Preferencias de búsqueda
+# Search preferences
 
-## Objetivo
-- Roles: <lista>
+## Target
+- Roles: <list>
 - Seniority: <Senior / Lead …>
-- Modalidad: 100% remoto, contratable desde <país>
-- Región de la empresa: <prioridad, ej. LATAM → resto de América → otras>
-- Idioma de la postulación: el de la oferta
+- Work mode: 100% remote, hireable from <country>
+- Company region: <priority, e.g. LATAM → rest of the Americas → other>
+- Application language: the offer's language
 
-## Salario
-- Objetivo: <USD/mes>        # se declara si la oferta no publica salario
-- Mínimo aceptable: <USD/mes>
-- Expectativa a declarar: rango → mínimo + 25%; valor único → ese valor; sin salario → objetivo
-- Ajuste por cobertura de requisitos: ≥ 80% sin ajuste; 60–79% × 0.8; < 60% × 0.6 (nunca bajo el mínimo ni bajo el mínimo del rango)
+## Salary
+- Target: <USD/month>        # declared when the offer publishes no salary
+- Minimum acceptable: <USD/month>
+- Expectation to declare: range → minimum + 25%; single value → that value; no salary → target
+- Coverage adjustment: ≥ 80% no adjustment; 60–79% × 0.8; < 60% × 0.6 (never below the minimum nor below the range minimum)
 
-### Experiencia transferible
-| Piden | Equivalente en el perfil |
+### Transferable experience
+| Asked for | Equivalent in the profile |
 |---|---|
 | <Angular, Vue> | <React> |
 
-## Filtros duros
-- <presencial/híbrido, restricción de país, salario bajo el mínimo, antigüedad > 30 días…>
+## Hard filters
+- <on-site/hybrid, country restriction, salary below minimum, older than 30 days…>
 
-## Rúbrica de score (0–100)
-<pesos y tablas de puntos por requisitos, salario, recencia y región>
+## Scoring rubric (0–100)
+<weights and point tables for requirements, salary, recency and region>
 
-## Datos para formularios
-- Disponibilidad / preaviso: <…>
-- Tipo de contratación aceptada: <…>
+## Form data
+- Availability / notice period: <…>
+- Accepted contract types: <…>
 
-## Respuestas reutilizables
-- <pregunta normalizada>: <respuesta> (AAAA-MM-DD)
+## Reusable answers
+- <normalized question>: <answer> (YYYY-MM-DD)
 ```
 
-### `docs/writing-style.md` — tu voz
+### `docs/writing-style.md` — your voice
 
-- Contiene rasgos de cómo escribes, frases literales tuyas de referencia y las reglas para responder formularios: no repetir, no poner "0 años", sin fechas por tecnología y tono natural.
-- Lo ideal es sacarlo de textos que hayas escrito tú, como los README de tus proyectos.
+- Traits of how you write, literal reference sentences of yours, and the rules for form answers: no repeats, never "0 years", no dates per technology, natural tone.
+- Ideally extracted from texts you wrote yourself, like your projects' READMEs.
 
 ```markdown
-# Estilo de escritura del usuario
-## Rasgos
+# User writing style
+## Traits
 - <…>
-## Respuestas a formularios
-- <reglas>
-## Evitar
-- <clichés, exageraciones…>
-## Frases de referencia (literales del usuario)
+## Form answers
+- <rules>
+## Avoid
+- <clichés, exaggerations…>
+## Reference sentences (literal, by the user)
 - "<…>"
 ```
 
-### `docs/answer-bank.md` — banco de respuestas
+### `docs/answer-bank.md` — answer bank
 
-Tiene una respuesta base por tema o tecnología, escrita con tu voz y solo con hechos del perfil. `/apply` lo amplía con las respuestas nuevas.
+One base answer per topic or technology, written in your voice and only with facts from the profile. Each topic can hold an English and a Spanish version; `/apply` uses the one matching the offer and adds new answers.
 
 ```markdown
-# Banco de respuestas
-## Patrones
-### Tecnología equivalente
-No he trabajado con <X>, pero sí con <Y>, …
-### Sin base parecida
-No he tenido la oportunidad de trabajar con esta herramienta.
+# Answer bank
+## Patterns
+### Equivalent technology
+EN: I haven't worked with <X>, but I have with <Y>, …
+ES: No he trabajado con <X>, pero sí con <Y>, …
+### No similar basis
+EN: I haven't had the opportunity to work with this tool.
+ES: No he tenido la oportunidad de trabajar con esta herramienta.
 
-## Trayectoria
-### <tema>
-<respuesta>
+## Background
+### <topic>
+EN: <answer>
+ES: <answer>
 
-## Tecnologías
-### <tecnología>
-<respuesta>
+## Technologies
+### <technology>
+EN: <answer>
+ES: <answer>
 
-## Proceso
-### Disponibilidad
-<respuesta>
+## Process
+### Availability
+EN: <answer>
+ES: <answer>
 ```
 
-## Formato de `data/`
+## `data/` format
 
-Las plantillas están versionadas en [`.claude/templates/data/`](.claude/templates/data/). Para empezar, cópialas:
+The templates are versioned in [`.claude/templates/data/`](.claude/templates/data/). To start, copy them:
 
 ```bash
 cp .claude/templates/data/*.md data/
 ```
 
-Si te olvidas, no pasa nada: `job-scout` crea `sources.md` y `offers.md`, y `/apply` crea `applications.md` a partir de las plantillas cuando no existen. Después los mantienen los propios agentes.
+If you forget, nothing breaks: `job-scout` creates `sources.md` and `offers.md`, and `/apply` creates `applications.md`, from the templates when they don't exist. After that the agents maintain them.
 
-| Archivo | Qué es | Plantilla |
+| File | What it is | Template |
 |---|---|---|
-| `data/sources.md` | Portales de empleo y cómo acceder a cada uno (API, RSS, WebFetch o búsqueda `site:`). El scout lo actualiza cuando un portal falla o encuentra uno nuevo | Trae unos 17 portales ya probados, enfocados en remoto y LATAM |
-| `data/offers.md` | Histórico de todas las ofertas vistas, incluidas las descartadas, para no repetirlas. Define el formato de ID (`<fuente>-<YYYYMMDD>-<vacante>`), que es también el nombre de la carpeta en `applications/` | Encabezado y tabla vacía |
-| `data/applications.md` | Una fila por intento de postulación; el detalle está en `applications/<id>/application-log.md` | Encabezado y tabla vacía |
+| `data/sources.md` | Job boards and how to access each one (API, RSS, WebFetch or `site:` search). The scout updates it when a board fails or it finds a new one | Ships with ~17 tested boards, focused on remote and LATAM |
+| `data/offers.md` | History of every offer seen, including discarded ones, to avoid repeats. Defines the ID format (`<source>-<YYYYMMDD>-<role>`), which is also the folder name in `applications/` | Header and empty table |
+| `data/applications.md` | One row per application attempt; details live in `applications/<id>/application-log.md` | Header and empty table |

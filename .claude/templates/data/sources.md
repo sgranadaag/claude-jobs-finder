@@ -1,23 +1,23 @@
-# Portales de empleo
+# Job boards
 
-> Lo mantiene `job-scout`: puede agregar portales nuevos y debe anotar cuando uno no es accesible (bloqueo, login requerido) para usar otra estrategia la siguiente vez.
+> Maintained by `job-scout`: it may add new boards and must note when one is not reachable (blocked, login required) so a different strategy is used next time.
 
-| Portal | URL | Enfoque | Estrategia de acceso | Notas |
+| Board | URL | Focus | Access strategy | Notes |
 |---|---|---|---|---|
-| LinkedIn Jobs | https://www.linkedin.com/jobs | General, remoto global | WebSearch `site:linkedin.com/jobs/view` (bloquea fetch directo) | Fuente principal en LATAM |
-| Get on Board | https://www.getonbrd.com | Tech LATAM, salarios publicados | WebFetch | Filtra por remoto y salario. `/jobs/programming/remote` da 404 (2026-10-12); usar `/empleos/programacion` y `/jobs/tag/<tech>` (ej. `/jobs/tag/nestjs`, `/jobs/tag/react`), que listan salario, modalidad y fecha. Algunas URLs de ofertas vistas en WebSearch dan 404 (expiradas). Muchas ofertas son híbridas en Santiago: revisar modalidad |
-| Torre | https://torre.ai | LATAM remoto | WebSearch / WebFetch | |
-| We Work Remotely | https://weworkremotely.com | Remoto global | WebFetch (RSS disponible) | Revisar restricción de país |
-| Remote OK | https://remoteok.com | Remoto global | WebFetch (`/api` JSON) | Suele publicar salario |
-| Remotive | https://remotive.com | Remoto global | WebFetch (`/api/remote-jobs`) | API funciona con `?category=software-dev&limit=N`; expone `candidate_required_location` (2026-10-12). Pocas ofertas abiertas a LATAM |
-| Himalayas | https://himalayas.app | Remoto global | WebFetch | Indica países permitidos |
-| Working Nomads | https://www.workingnomads.com | Remoto global | WebFetch | |
-| Wellfound | https://wellfound.com | Startups | WebSearch | Login para detalles |
-| Jobgether | https://jobgether.com | Remoto, filtra por país | WebSearch / WebFetch | |
-| Arc.dev | https://arc.dev/remote-jobs | Remoto para devs LATAM | WebFetch | |
-| Revelo | https://www.revelo.com | LATAM → empresas EE. UU. | WebSearch | Talent network |
-| Turing | https://www.turing.com/jobs | Remoto global | WebSearch | Talent network |
-| Hacker News — Who is hiring | https://news.ycombinator.com | Startups | WebSearch hilo del mes actual | Buscar "REMOTE" + "LATAM"/"worldwide" |
-| Computrabajo | https://co.computrabajo.com | Colombia | WebFetch | Mayormente salarios bajos |
+| LinkedIn Jobs | https://www.linkedin.com/jobs | General, global remote | WebSearch `site:linkedin.com/jobs/view` (blocks direct fetch) | Main source in LATAM |
+| Get on Board | https://www.getonbrd.com | Tech LATAM, published salaries | WebFetch | Filter by remote and salary. `/jobs/programming/remote` returns 404 (2026-10-12); use `/empleos/programacion` and `/jobs/tag/<tech>` (e.g. `/jobs/tag/nestjs`, `/jobs/tag/react`), which list salary, work mode and date. Some offer URLs found via WebSearch return 404 (expired). Many offers are hybrid in Santiago (Chile): check the work mode |
+| Torre | https://torre.ai | LATAM remote | WebSearch / WebFetch | |
+| We Work Remotely | https://weworkremotely.com | Global remote | WebFetch (RSS available) | Check country restriction |
+| Remote OK | https://remoteok.com | Global remote | WebFetch (`/api` JSON) | Usually publishes salary |
+| Remotive | https://remotive.com | Global remote | WebFetch (`/api/remote-jobs`) | API works with `?category=software-dev&limit=N`; exposes `candidate_required_location` (2026-10-12). Few offers open to LATAM |
+| Himalayas | https://himalayas.app | Global remote | WebFetch | Lists allowed countries |
+| Working Nomads | https://www.workingnomads.com | Global remote | WebFetch | |
+| Wellfound | https://wellfound.com | Startups | WebSearch | Login required for details |
+| Jobgether | https://jobgether.com | Remote, filters by country | WebSearch / WebFetch | |
+| Arc.dev | https://arc.dev/remote-jobs | Remote for LATAM devs | WebFetch | |
+| Revelo | https://www.revelo.com | LATAM → US companies | WebSearch | Talent network |
+| Turing | https://www.turing.com/jobs | Global remote | WebSearch | Talent network |
+| Hacker News — Who is hiring | https://news.ycombinator.com | Startups | WebSearch for the current month's thread | Search "REMOTE" + "LATAM"/"worldwide" |
+| Computrabajo | https://co.computrabajo.com | Colombia | WebFetch | Mostly low salaries |
 | Magneto | https://www.magneto365.com | Colombia | WebFetch | |
 | elempleo | https://www.elempleo.com | Colombia | WebFetch | |

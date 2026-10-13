@@ -1,47 +1,49 @@
 # jobs-finder
 
-Sistema personal de búsqueda y aplicación a ofertas de empleo (software engineering), ejecutado como un workflow de Claude Code.
+Personal system for finding and applying to job offers (software engineering), run as a Claude Code workflow.
 
-## Flujo
+**Project language: English.** Agents, skills, rules, formats, file headers and status values are written in English. Content that goes to an employer follows the offer's language (Spanish offers get Spanish CVs and answers). The user's own texts in `docs/` (e.g. Spanish answers in the answer bank, the Spanish short description) stay as they are.
 
-| Paso | Entrada | Quién lo ejecuta | Por qué |
-|------|---------|------------------|---------|
-| 1. Buscar | `/find-jobs` | subagente `job-scout` | Mucha navegación web; se aísla para no llenar el contexto principal |
-| 2. Preparar | `/tailor-cv` | subagente `cv-tailor` (uno por oferta, en paralelo) | Cada oferta es independiente y necesita contexto limpio |
-| 3. Aplicar | `/apply` | sesión principal + navegador | Requiere tus sesiones, intervención humana (login, captcha, preguntas) y confirmación antes de enviar |
+## Flow
 
-## Archivos
+| Step | Entry point | Who runs it | Why |
+|------|-------------|-------------|-----|
+| 1. Search | `/find-jobs` | `job-scout` subagent | Heavy web browsing; isolated so it doesn't fill the main context |
+| 2. Prepare | `/tailor-cv` | `cv-tailor` subagent (one per offer, in parallel) | Each offer is independent and benefits from a clean context |
+| 3. Apply | `/apply` | main session + browser | Needs the user's sessions, human intervention (login, captcha, questions) and confirmation before submitting |
 
-- `docs/profile.md` — **fuente de verdad** del perfil (transcripción fiel del CV). Todo lo que se diga sobre el candidato debe salir de aquí (incluye "Contacto": nombre, email, teléfono, ubicación, LinkedIn, GitHub).
-- `docs/writing-style.md` — voz del usuario (extraída de sus README) para los textos redactados.
-- `docs/preferences.md` — criterios de búsqueda, salario (con ajuste por cobertura y experiencia transferible), filtros, rúbrica de score y respuestas reutilizables del usuario.
-- `docs/answer-bank.md` — **banco de respuestas** por tema/tecnología, con la voz del usuario. `/apply` lo adapta a cada formulario y lo amplía con respuestas nuevas.
-- `docs/CV ATS Format EN.pdf` / `ES.pdf` — CV original.
-- `data/sources.md` — portales de empleo que usa el scout (lo mantiene el propio scout).
-- `data/offers.md` — **histórico** de todas las ofertas vistas (incluye descartadas), usado para no repetir.
-- `data/applications.md` — registro global de aplicaciones.
-- `applications/<id>/` — una carpeta por oferta:
-  - `offer.md` — copia de la oferta, score y la **única tabla de requisitos** (scout la crea, cv-tailor la afina; de ella salen score y salario)
-  - `cv.md` — contenido del CV adaptado, en formato fijo (cv-tailor)
-  - `<Nombre>_CV_<Empresa>.pdf` — CV final, generado por el script
-  - `application.md` — corto: CV, salario con su cálculo, "¿por qué?", carta y pendientes (cv-tailor)
-  - `application-log.md` — qué se llenó/envió, preguntas literales con sus respuestas y resultado (apply)
-- `.claude/templates/data/` — plantillas versionadas de `sources.md`, `offers.md` y `applications.md`. `data/` no se versiona: si falta un archivo, se crea copiando su plantilla.
-- `.claude/templates/cv.html` — estilo del CV (réplica del original). Si cambia, se regeneran los PDF con el script.
-- `.claude/scripts/build-cv.mjs <ID> [--keep-html]` — convierte `applications/<ID>/cv.md` en el PDF con la plantilla y Edge headless.
-- `.claude/settings.json` — permisos pre-autorizados (búsqueda web, escritura en `applications/`, `data/` y el banco de respuestas, script del CV, Claude in Chrome) para reducir confirmaciones.
+## Files
 
-## Estados de una oferta (`data/offers.md`)
+- `docs/profile.md` — **source of truth** for the profile (faithful transcription of the CV). Everything said about the candidate must come from here (includes "Contact": name, email, phone, location, LinkedIn, GitHub).
+- `docs/writing-style.md` — the user's voice (extracted from their READMEs) for written texts, plus the rules for form answers.
+- `docs/preferences.md` — search criteria, salary (with coverage adjustment and transferable experience), filters, scoring rubric and the user's reusable answers.
+- `docs/answer-bank.md` — **answer bank** by topic/technology, in the user's voice. `/apply` adapts it to each form and extends it with new answers.
+- `docs/CV ATS Format EN.pdf` / `ES.pdf` — original CV.
+- `data/sources.md` — job boards used by the scout (maintained by the scout itself).
+- `data/offers.md` — **history** of every offer seen (including discarded ones), used to avoid repeats.
+- `data/applications.md` — global log of applications.
+- `applications/<id>/` — one folder per offer:
+  - `offer.md` — copy of the offer, score and the **only requirements table** (the scout creates it, cv-tailor refines it; score and salary come from it)
+  - `cv.md` — tailored CV content, in a fixed format (cv-tailor)
+  - `<Name>_CV_<Company>.pdf` — final CV, built by the script
+  - `application.md` — short: CV, salary with its calculation, "why?", cover letter and pending items (cv-tailor)
+  - `application-log.md` — what was filled/sent, literal questions with their answers, and the result (apply)
+- `.claude/templates/data/` — versioned templates for `sources.md`, `offers.md` and `applications.md`. `data/` is not versioned: if a file is missing, create it by copying its template.
+- `.claude/templates/cv.html` — CV style (replica of the original). If it changes, rebuild the PDFs with the script.
+- `.claude/scripts/build-cv.mjs <ID> [--keep-html]` — turns `applications/<ID>/cv.md` into the PDF using the template and headless Edge.
+- `.claude/settings.json` — pre-authorized permissions (web search, writing to `applications/`, `data/` and the answer bank, the CV script, Claude in Chrome) to reduce prompts.
 
-`descartada` → no cumple filtros duros (no se procesa, solo evita repetir)
-`nueva` → listada por el scout
-`preparada` → tiene CV y datos de aplicación
-`borrador` → formulario lleno y guardado en el portal, sin enviar (falta pulsar "enviar")
-`aplicada` / `fallida` / `omitida` → resultado de `/apply`
+## Offer status (`data/offers.md`)
 
-## Reglas no negociables
+`discarded` → fails the hard filters (not processed, only kept to avoid repeats)
+`new` → listed by the scout
+`prepared` → has a CV and application data
+`draft` → form filled and saved on the board, not submitted
+`applied` / `failed` / `skipped` → result of `/apply`
 
-1. **No inventar nada.** Ni skills, ni años, ni cargos, ni métricas, ni certificaciones, ni respuestas. Solo se permite reordenar, seleccionar, omitir, reformular y traducir información que exista en `docs/`. Si algo no está, se marca como `PENDIENTE USUARIO`.
-2. Solo la sesión principal edita `data/offers.md` cuando hay subagentes en paralelo (los `cv-tailor` no lo tocan, para evitar conflictos de escritura).
-3. Nunca se envía una aplicación sin confirmación explícita del usuario.
-4. Documentos de identidad (cédula, pasaporte) no se guardan en ningún archivo: si un formulario los pide, se le piden al usuario en el momento. `docs/`, `data/` y `applications/` no se versionan.
+## Non-negotiable rules
+
+1. **Invent nothing.** No skills, years, roles, metrics, certifications or answers that aren't in `docs/`. Only reordering, selecting, omitting, rephrasing and translating existing information is allowed. If something is missing, mark it `PENDING USER`.
+2. Only the main session edits `data/offers.md` while subagents run in parallel (the `cv-tailor` instances don't touch it, to avoid write conflicts).
+3. An application is never submitted without the user's explicit confirmation.
+4. ID documents (national ID, passport) are not stored in any file: if a form asks for them, ask the user at that moment. `docs/`, `data/` and `applications/` are not versioned.

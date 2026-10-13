@@ -1,40 +1,40 @@
-// Construye el CV de una oferta: applications/<ID>/cv.md → .claude/templates/cv.html → <Nombre>_<Apellido>_CV_<Empresa>.pdf
-// Uso: node .claude/scripts/build-cv.mjs <ID> [--keep-html]   (--keep-html deja el HTML intermedio en la carpeta temporal para revisarlo)
+// Builds an offer's CV: applications/<ID>/cv.md → .claude/templates/cv.html → <FirstName>_<LastName>_CV_<Company>.pdf
+// Usage: node .claude/scripts/build-cv.mjs <ID> [--keep-html]   (--keep-html keeps the intermediate HTML in the temp folder for review)
 //
-// Formato de cv.md (el agente solo escribe este archivo):
+// cv.md format (the agent only writes this file). Section titles can be English or Spanish:
 //
 //   ---
-//   lang: es                      # es | en
-//   company: <Empresa>            # se usa en el nombre del PDF
+//   lang: en                      # en | es
+//   company: <Company>            # used in the PDF name
 //   ---
-//   # <Nombre completo>            # nombre y apellido dan el nombre del PDF
+//   # <Full name>                 # first name and last name give the PDF name
 //   <email>
-//   <teléfono>
+//   <phone>
 //
-//   ## Sumario                    # o Career Summary
-//   Párrafo...
+//   ## Career Summary             # or Sumario
+//   Paragraph...
 //
-//   ## Habilidades                # o Summary of Qualifications — una skill por línea
+//   ## Summary of Qualifications  # or Habilidades — one skill per line
 //   - <skill>
 //
-//   ## Idiomas                    # o Languages
-//   - <idioma (nivel)>
+//   ## Languages                  # or Idiomas
+//   - <language (level)>
 //
-//   ## Experiencia                # o Career History — un ### por cargo
-//   ### <Empresa>, <Ciudad>, <País>
-//   role: <cargo>
-//   dates: <fechas>
-//   team: <equipo>                # opcional
+//   ## Career History             # or Experiencia — one ### per role
+//   ### <Company>, <City>, <Country>
+//   role: <role>
+//   dates: <dates>
+//   team: <team>                  # optional
 //
-//   Párrafo 1...
+//   Paragraph 1...
 //
-//   Párrafo 2...
+//   Paragraph 2...
 //
-//   Skills: <skills del cargo>
+//   Skills: <role skills>
 //
-//   ## Liderazgo                  # o Leadership — mismo formato, sin role
-//   ## Certificaciones            # o Certifications — ### nombre, dates:, issuer:
-//   ## Educación                  # o Education — ### institución, dates:, degree:
+//   ## Leadership                 # or Liderazgo — same format, no role
+//   ## Certifications             # or Certificaciones — ### name, dates:, issuer:
+//   ## Education                  # or Educación — ### institution, dates:, degree:
 
 import { readFileSync, writeFileSync, existsSync, rmSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -43,12 +43,12 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const id = process.argv[2];
-if (!id) { console.error('Uso: node .claude/scripts/build-cv.mjs <ID>'); process.exit(1); }
+if (!id) { console.error('Usage: node .claude/scripts/build-cv.mjs <ID>'); process.exit(1); }
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const dir = join(root, 'applications', id);
 const mdPath = join(dir, 'cv.md');
-if (!existsSync(mdPath)) { console.error(`No existe ${mdPath}`); process.exit(1); }
+if (!existsSync(mdPath)) { console.error(`Not found: ${mdPath}`); process.exit(1); }
 
 const SECTIONS = {
   summary: ['career summary', 'sumario'],
@@ -62,7 +62,7 @@ const SECTIONS = {
 const typeOf = title => Object.keys(SECTIONS).find(k => SECTIONS[k].includes(title.trim().toLowerCase()));
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-// --- parseo ---
+// --- parse ---
 const raw = readFileSync(mdPath, 'utf8').replace(/\r\n/g, '\n');
 const fm = {};
 let body = raw;
@@ -71,7 +71,7 @@ if (fmMatch) {
   fmMatch[1].split('\n').forEach(l => { const m = l.match(/^(\w+):\s*(.*)$/); if (m) fm[m[1]] = m[2].trim(); });
   body = raw.slice(fmMatch[0].length);
 }
-if (!fm.lang || !fm.company) { console.error('cv.md necesita lang y company en el frontmatter'); process.exit(1); }
+if (!fm.lang || !fm.company) { console.error('cv.md needs lang and company in the frontmatter'); process.exit(1); }
 
 const lines = body.split('\n');
 let name = '';
@@ -98,7 +98,7 @@ for (const line of lines) {
     flushPara();
     const title = t.slice(3).trim();
     const type = typeOf(title);
-    if (!type) { console.error(`Sección desconocida: "${title}"`); process.exit(1); }
+    if (!type) { console.error(`Unknown section: "${title}"`); process.exit(1); }
     section = { title, type, items: [], entries: [] };
     entry = null;
     sections.push(section);
@@ -156,7 +156,7 @@ const html = readFileSync(join(root, '.claude', 'templates', 'cv.html'), 'utf8')
 
 // --- PDF ---
 const safe = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w-]+/g, '_').replace(/^_+|_+$/g, '');
-// Las dos primeras palabras del nombre en cv.md forman el prefijo del PDF (ej. "Ana L\u00f3pez Ruiz" \u2192 Ana_Lopez_CV_<Empresa>.pdf)
+// The first two words of the name in cv.md form the PDF prefix (e.g. "Ana López Ruiz" → Ana_Lopez_CV_<Company>.pdf)
 const personName = safe(name.split(/\s+/).slice(0, 2).join(' '));
 const pdf = join(dir, `${personName}_CV_${safe(fm.company)}.pdf`);
 const tmpHtml = join(tmpdir(), `cv-${id}.html`);
@@ -167,9 +167,9 @@ const edge = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
 spawnSync(edge, ['--headless', '--disable-gpu', '--no-pdf-header-footer', `--print-to-pdf=${pdf}`, pathToFileURL(tmpHtml).href], { stdio: 'ignore' });
 if (process.argv.includes("--keep-html")) console.log(`HTML ${tmpHtml}`); else rmSync(tmpHtml, { force: true });
 
-if (!existsSync(pdf) || statSync(pdf).size === 0) { console.error(`No se generó ${pdf}`); process.exit(1); }
+if (!existsSync(pdf) || statSync(pdf).size === 0) { console.error(`PDF was not created: ${pdf}`); process.exit(1); }
 
-// Archivos de la versión anterior del flujo
+// Files from the previous version of the workflow
 for (const legacy of ['cv.pdf', 'cv.html']) rmSync(join(dir, legacy), { force: true });
 
 console.log(`OK ${pdf}`);

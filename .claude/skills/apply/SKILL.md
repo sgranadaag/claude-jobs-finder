@@ -1,55 +1,55 @@
 ---
 name: apply
-description: Aplica a las ofertas en estado "preparada" (o "borrador") usando el navegador, llenando los formularios con los datos ya generados y el banco de respuestas, y registrando qué se envió y el resultado. Usar solo cuando el usuario pida aplicar (paso 3 del workflow).
-argument-hint: "[IDs separados por espacio | vacío = todas las preparadas] [sin enviar]"
+description: Applies to offers in "prepared" (or "draft") status using the browser, filling the forms with the generated data and the answer bank, and recording what was sent and the result. Use only when the user asks to apply (step 3 of the workflow).
+argument-hint: "[space-separated IDs | empty = all prepared] [no-submit]"
 disable-model-invocation: true
 ---
 
-Paso 3 del workflow (ver `CLAUDE.md`). Se ejecuta en la sesión principal (no en un subagente) porque necesita el navegador, las sesiones del usuario y su confirmación.
+Step 3 of the workflow (see `CLAUDE.md`). It runs in the main session (not in a subagent) because it needs the browser, the user's sessions and their confirmation.
 
-## Preparación
+## Preparation
 
-1. Lee `data/offers.md` y toma las ofertas indicadas en `$ARGUMENTS`, o todas las de estado `preparada`. Muéstralas ordenadas por score y confirma con el usuario cuáles aplicar. Si `$ARGUMENTS` dice "sin enviar", llena todo y deja cada postulación como borrador.
-2. Lee `docs/answer-bank.md`, `docs/writing-style.md` (sección "Respuestas a formularios") y `docs/preferences.md` ("Respuestas reutilizables" y salario).
-3. Carga la skill del navegador disponible (Claude in Chrome, o en su defecto el navegador integrado) antes de la primera acción en el navegador.
+1. Read `data/offers.md` and take the offers given in `$ARGUMENTS`, or all offers with status `prepared`. Show them sorted by score and confirm with the user which ones to apply to. If `$ARGUMENTS` says "no-submit", fill everything and leave each application as a draft.
+2. Read `docs/answer-bank.md`, `docs/writing-style.md` ("Form answers" section) and `docs/preferences.md` ("Reusable answers" and salary).
+3. Load the available browser skill (Claude in Chrome, or else the built-in browser) before the first browser action.
 
-## Por cada oferta
+## For each offer
 
-1. Lee `applications/<ID>/application.md` (CV, salario, "¿por qué?", carta, pendientes) y `offer.md` (tabla de requisitos). Los datos de contacto están en "Contacto" de `docs/profile.md`. Documentos de identidad u otros datos sensibles no se guardan en ningún archivo: si el formulario los exige, pídeselos al usuario en el momento y no los registres en el log. Si quedan pendientes que el formulario vaya a pedir, pregúntale al usuario antes de empezar.
-2. Abre la URL de la oferta y llega al formulario (Apply / Easy Apply / ATS externo como Greenhouse, Lever, Ashby, Workable).
-3. Si pide login, crear cuenta, captcha o verificación por email: **detente y pide al usuario que lo haga**. No crees cuentas sin permiso.
-4. Lee **todas** las preguntas del formulario antes de responder ninguna. Luego:
-   - Asigna a cada pregunta los temas de `docs/answer-bank.md` que le corresponden y **reparte el material para no repetir** el mismo proyecto, logro o certificación en dos respuestas (cuentan también "¿por qué la empresa?" y la carta).
-   - Adapta la redacción de cada respuesta base a la pregunta, sin agregar hechos. Si pide una tecnología transferible, usa el patrón "Tecnología equivalente"; si no hay base, "Sin base parecida".
-   - Salario o renta (bruta o líquida): el valor de `application.md`.
-   - Preguntas que dependen del usuario y no están en los docs ni en "Respuestas reutilizables": pregúntale; nunca las supongas.
-   - Demográficas opcionales: en blanco o "Prefiero no responder".
-5. Sube `applications/<ID>/<Nombre>_CV_<Empresa>.pdf` (sin actualizar el perfil del portal con ese CV ni marcarlo por defecto). Si el navegador no permite subir archivos, pídele al usuario que lo suba e indícale la ruta absoluta.
-6. **Antes de enviar**: muestra al usuario un resumen de todos los campos y respuestas y espera su confirmación explícita. Sin confirmación no se envía. En modo "sin enviar", deja la postulación en la vista previa o como borrador.
-7. Envía y captura el resultado (mensaje de confirmación, número de referencia, error).
-8. Si redactaste una respuesta nueva que servirá para otras ofertas, o el usuario corrigió una, agrégala o actualízala en `docs/answer-bank.md`. Si el usuario dio un dato personal nuevo (renta, procesos previos, etc.), agrégalo a "Respuestas reutilizables" de `docs/preferences.md`.
+1. Read `applications/<ID>/application.md` (CV, salary, "why?", cover letter, pending items) and `offer.md` (requirements table). Contact data lives in "Contact" in `docs/profile.md`. ID documents and other sensitive data are not stored in any file: if the form requires them, ask the user at that moment and don't record them in the log. If there are pending items the form will ask for, ask the user before starting.
+2. Open the offer URL and get to the form (Apply / Easy Apply / external ATS such as Greenhouse, Lever, Ashby, Workable).
+3. If it asks for login, account creation, captcha or email verification: **stop and ask the user to do it**. Don't create accounts without permission.
+4. Read **all** the form questions before answering any of them. Then:
+   - Map each question to the `docs/answer-bank.md` topics that fit it and **spread the material so nothing repeats**: the same project, achievement or certification never appears in two answers ("why this company?" and the cover letter count too).
+   - Adapt each base answer to the question, without adding facts. Answer in the offer's language. If it asks for a transferable technology, use the "Equivalent technology" pattern; if there is no basis, "No similar basis".
+   - Salary (gross or net): the value in `application.md`.
+   - Questions that depend on the user and are not in the docs or in "Reusable answers": ask the user; never assume.
+   - Optional demographic questions: blank or "Prefer not to say".
+5. Upload `applications/<ID>/<Name>_CV_<Company>.pdf` (without updating the board's profile with that CV or setting it as default). If the browser can't upload files, ask the user to upload it and give them the absolute path.
+6. **Before submitting**: show the user a summary of every field and answer and wait for their explicit confirmation. Nothing is sent without it. In "no-submit" mode, leave the application in preview or as a draft.
+7. Submit and capture the result (confirmation message, reference number, error).
+8. If you wrote a new answer that will be useful for other offers, or the user corrected one, add or update it in `docs/answer-bank.md`. If the user provided new personal data (salary, previous processes, etc.), add it to "Reusable answers" in `docs/preferences.md`.
 
-## Registro (siempre, incluso si falla, se omite o queda en borrador)
+## Log (always, even if it fails, is skipped or stays as a draft)
 
-Crea o amplía `applications/<ID>/application-log.md`:
+Create or extend `applications/<ID>/application-log.md`:
 
 ```markdown
-## Intento <YYYY-MM-DD HH:mm>
-- URL / plataforma: ...
-- Resultado: aplicada | borrador | bloqueada | fallida | omitida
-- Confirmación / referencia: ...
-- CV: <archivo> (nombre con el que quedó en el portal)
-- Salario declarado: <valor>
-- Campos:
-  | Campo | Valor |
+## Attempt <YYYY-MM-DD HH:mm>
+- URL / platform: ...
+- Result: applied | draft | blocked | failed | skipped
+- Confirmation / reference: ...
+- CV: <file> (name it has on the board)
+- Declared salary: <value>
+- Fields:
+  | Field | Value |
   |---|---|
-- Preguntas de selección (texto literal de la pregunta y respuesta enviada, completas):
-  1. **<pregunta tal cual aparece>**
-     <respuesta>
-- Datos aportados por el usuario: ...
-- Incidencias: ...
+- Screening questions (literal question text and the answer sent, in full):
+  1. **<question exactly as it appears>**
+     <answer>
+- Data provided by the user: ...
+- Issues: ...
 ```
 
-Luego agrega una fila a `data/applications.md` (si no existe, créalo copiando `.claude/templates/data/applications.md`) y actualiza el estado en `data/offers.md` (`aplicada`, `borrador`, `fallida` u `omitida`, con el motivo en Notas).
+Then add a row to `data/applications.md` (if it doesn't exist, create it by copying `.claude/templates/data/applications.md`) and update the status in `data/offers.md` (`applied`, `draft`, `failed` or `skipped`, with the reason in Notes).
 
-Al final, muestra un resumen de todas las aplicaciones de la sesión.
+At the end, show a summary of all the applications of the session.

@@ -1,8 +1,9 @@
-# Histórico de ofertas
+# Offer history
 
-> Toda oferta vista queda aquí, incluidas las descartadas, para no listarla de nuevo.
-> Clave de duplicado: URL canónica (sin parámetros de tracking) **o** empresa + título normalizados.
-> Formato de `ID`: `<fuente>-<YYYYMMDD de detección>-<nombre-de-la-vacante>` en kebab-case (ej. `getonboard-20261012-technical-lead-full-stack`). Fuente sin espacios ni puntos: `getonboard`, `linkedin`, `remoteok`, `remotive`, `weworkremotely`, `himalayas`… Si el ID ya existe, agregar sufijo `-2`. Es también el nombre de la carpeta en `applications/`.
+> Every offer seen stays here, including discarded ones, so it is never listed again.
+> Duplicate key: canonical URL (without tracking parameters) **or** normalized company + title.
+> `ID` format: `<source>-<YYYYMMDD found>-<role-name>` in kebab-case (e.g. `getonboard-20261012-technical-lead-full-stack`). Source without spaces or dots: `getonboard`, `linkedin`, `remoteok`, `remotive`, `weworkremotely`, `himalayas`… If the ID already exists, add a `-2` suffix. It is also the folder name in `applications/`.
+> Status: `discarded` | `new` | `prepared` | `draft` | `applied` | `failed` | `skipped`.
 
-| ID | Detectada | Empresa | Rol | Fuente | URL | Publicada | Salario (USD/mes) | Score | Estado | Notas |
+| ID | Found | Company | Role | Source | URL | Published | Salary (USD/month) | Score | Status | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|

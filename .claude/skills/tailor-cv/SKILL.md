@@ -1,17 +1,17 @@
 ---
 name: tailor-cv
-description: Genera el CV adaptado y los datos de aplicación para las ofertas registradas, sin inventar información. Usar cuando el usuario quiera preparar ofertas para aplicar o ejecutar el paso 2 del workflow.
-argument-hint: "[IDs separados por espacio | score mínimo, por defecto 60]"
+description: Generates the tailored CV and application data for the recorded offers, without inventing information. Use when the user wants to prepare offers to apply to, or to run step 2 of the workflow.
+argument-hint: "[space-separated IDs | minimum score, default 60]"
 ---
 
-Paso 2 del workflow (ver `CLAUDE.md`).
+Step 2 of the workflow (see `CLAUDE.md`).
 
-1. Lee `data/offers.md` y elige las ofertas a preparar:
-   - Si `$ARGUMENTS` trae IDs, esas.
-   - Si trae un número, las de estado `nueva` con score ≥ ese número.
-   - Si viene vacío, las de estado `nueva` con score ≥ 60.
-   Muestra la lista al usuario antes de empezar. Si no hay ninguna, dilo y termina.
-2. Lanza un subagente `cv-tailor` por oferta, pasando el ID. Lánzalos en paralelo en lotes de hasta 4.
-3. Cuando termine cada uno, actualiza su fila en `data/offers.md`: estado `preparada` si existen `<Nombre>_CV_<Empresa>.pdf` y `application.md`; si no, deja `nueva` y anota el problema en Notas. Solo tú editas este archivo; los subagentes no.
-4. Muestra un resumen por oferta: cobertura de obligatorios, salario resultante, requisitos transferibles y sin base, y la lista consolidada de pendientes. Si se repite el mismo dato pendiente, sugiere agregarlo a `docs/preferences.md` para que no vuelva a quedar pendiente.
-5. Recomienda al usuario revisar el PDF de cada oferta antes de ejecutar `/apply`.
+1. Read `data/offers.md` and pick the offers to prepare:
+   - If `$ARGUMENTS` has IDs, those.
+   - If it has a number, the `new` offers with score ≥ that number.
+   - If it is empty, the `new` offers with score ≥ 60.
+   Show the list to the user before starting. If there are none, say so and stop.
+2. Launch one `cv-tailor` subagent per offer, passing the ID. Launch them in parallel in batches of up to 4.
+3. When each one finishes, update its row in `data/offers.md`: status `prepared` if `<Name>_CV_<Company>.pdf` and `application.md` exist; otherwise leave it `new` and note the problem in Notes. Only you edit this file; the subagents don't.
+4. Show a summary per offer: mandatory coverage, resulting salary, transferable and no-basis requirements, and the consolidated list of pending items. If the same pending item repeats, suggest adding it to `docs/preferences.md` so it doesn't come up again.
+5. Recommend that the user reviews each offer's PDF before running `/apply`.

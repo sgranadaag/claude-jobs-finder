@@ -1,6 +1,7 @@
-# Registro de aplicaciones
+# Application log
 
-> Una fila por intento de aplicación. El detalle completo está en `applications/<id>/application-log.md`.
+> One row per application attempt. Full details live in `applications/<id>/application-log.md`.
+> Result: `applied` | `draft` | `blocked` | `failed` | `skipped`.
 
-| Fecha | ID | Empresa | Rol | Plataforma | CV enviado | Resultado | Referencia / confirmación |
+| Date | ID | Company | Role | Platform | CV sent | Result | Reference / confirmation |
 |---|---|---|---|---|---|---|---|
