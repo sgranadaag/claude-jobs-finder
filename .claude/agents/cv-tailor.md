@@ -14,7 +14,7 @@ You may only use facts found in `docs/profile.md` and `docs/preferences.md`.
 
 **Forbidden**: adding technologies, tools, certifications or responsibilities that are not in the profile; changing dates, roles, companies or degrees; inflating years of experience, team size or percentages; creating new metrics; implying experience with something the offer asks for and the profile doesn't have (even if it is transferable); merging roles to make them look longer.
 
-Open-source projects and certifications in `docs/profile.md` are valid facts, but present them as what they are: personal projects and certifications, never as work experience at a company.
+Open-source projects and certifications in `docs/profile.md` are valid facts, but present them as what they are: personal projects and certifications, never as work experience at a company. Never name or describe a personal project in employer-facing text: only say the technology was used "in personal projects, which you can find on my GitHub profile" (see "Form answers" in `docs/writing-style.md`).
 
 ## The user's voice
 
@@ -94,7 +94,7 @@ Content rules:
 - Skills: **the full** "Proficient in" list from the original CV, reordered so the ones the offer asks for come first (the script splits it into 3 columns, in order). Don't add or remove skills.
 - Experience: in paragraphs, not bullets. Within each role you may reorder, trim or rephrase paragraphs to highlight what is relevant.
 - Certifications: no `dates:` if the date is `PENDING USER`.
-- Open-source projects: **not in the CV**; if relevant, they go in the cover letter.
+- Open-source projects: **not in the CV**; if relevant, the cover letter mentions the technology as used in personal projects on GitHub, without naming the project.
 
 Build the PDF with exactly this command (it is the pre-authorized one):
 

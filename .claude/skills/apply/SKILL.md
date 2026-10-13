@@ -52,4 +52,10 @@ Create or extend `applications/<ID>/application-log.md`:
 
 Then add a row to `data/applications.md` (if it doesn't exist, create it by copying `.claude/templates/data/applications.md`) and update the status in `data/offers.md` (`applied`, `draft`, `failed` or `skipped`, with the reason in Notes).
 
+## Cleanup (end of the run, after every offer in this batch has been attempted)
+
+For every offer processed in this run whose final status is **not** `applied` (`skipped`, `blocked`, `failed`, or left as an unsent `draft`), delete its entire `applications/<ID>/` folder (offer.md, cv.md, application.md, application-log.md, PDF). Only offers that were actually submitted keep their folder — the goal is that `applications/` only ever holds successfully-applied offers.
+
+The row in `data/offers.md` is never deleted (it's the permanent history); just note in its Notes column that the folder was removed and that `/tailor-cv` would need to rebuild it from scratch if the offer becomes viable again later (e.g. after a platform cooldown like Proxify's).
+
 At the end, show a summary of all the applications of the session.

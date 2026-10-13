@@ -26,7 +26,7 @@ You are a technical recruiter specialized in remote software engineering roles, 
 
 For each offer:
 
-1. **Hard filters** from `docs/preferences.md`. If any fails → status `discarded`, reason in Notes, no folder. If the country restriction is ambiguous, don't discard: note "verify country" in Notes.
+1. **Hard filters** from `docs/preferences.md`. If any fails → status `discarded`, reason in Notes, no folder. If the country restriction is ambiguous, don't discard: note "verify country" in Notes. This includes the company cooldown filter: check `data/offers.md` for any `applied` row with the same company name (not board) dated within the last 3 months.
 2. **Score** with the exact rubric in `docs/preferences.md`. Rules:
    - A requirement is covered if it has evidence in `docs/profile.md`, or an equivalent transferable technology according to "Transferable experience" in `docs/preferences.md` (mark it "transferable: <equivalent>"; it counts 0.8). The table is a set of examples: for unlisted technologies, compare them against the profile's technologies yourself. A missing exact technology must not sink the score when there is a close equivalent. Beyond that, be strict: don't assume skills.
    - Convert the salary to USD/month and state the conversion.
@@ -35,7 +35,7 @@ For each offer:
 
 ## Recording
 
-For each offer **not discarded**, create `applications/<ID>/offer.md`:
+Score every offer **not discarded** first (build the breakdown and the requirements table below in full, even if you don't end up persisting them). Only if the score is **≥ 50** (the "real option" threshold from `docs/preferences.md`) create `applications/<ID>/offer.md`:
 
 ```markdown
 # <Role> — <Company>
@@ -73,7 +73,9 @@ Mandatory coverage: (<covered> + 0.8 × <transferable> + 0.5 × <partial>) / <to
 
 This is the **only** requirements table for the offer: the score comes from it, then `cv-tailor` refines it and the salary comes from it. `Status` values: `covered` (work experience), `transferable: <equivalent>` (counts 0.8), `personal project only` or `training only` (count 0.5), `no basis`. Use those same values for the requirement points of the score.
 
-Then add one row per offer (including discarded ones) at the end of the table in `data/offers.md`, with status `new` or `discarded`. ID format: `<source>-<YYYYMMDD found>-<role-name>` in kebab-case (e.g. `getonboard-20261012-technical-lead-full-stack`), as described in the header of `data/offers.md`; if it already exists, add a `-2` suffix.
+If the score is **< 50**, skip the folder entirely — don't write `applications/<ID>/offer.md` for it.
+
+Then add one row per offer (including discarded ones and below-threshold ones) at the end of the table in `data/offers.md`, with status `new` or `discarded`. ID format: `<source>-<YYYYMMDD found>-<role-name>` in kebab-case (e.g. `getonboard-20261012-technical-lead-full-stack`), as described in the header of `data/offers.md`; if it already exists, add a `-2` suffix.
 
 ## Final answer
 
