@@ -4,7 +4,7 @@ A personal [Claude Code](https://claude.com/claude-code) workflow to find softwa
 
 ```
 /find-jobs [amount] [focus]           → searches, scores and records new offers
-/apply [IDs | minimum score] [no-submit] → one job-applier per offer: CV + form in Chrome, then records the result
+/apply [IDs | minimum score] [no-submit] → one job-applier per offer: CV + form in Chrome; you click the final submit
 /tailor-cv <ID>                       → builds the CV and application data for one offer, without applying
 ```
 
@@ -26,15 +26,16 @@ A personal [Claude Code](https://claude.com/claude-code) workflow to find softwa
       │         ├─ reads the posting and the form
       │         ├─ tailor-cv skill ──► applications/<id>/cv.md ─► build-cv.mjs ─► PDF
       │         │                      applications/<id>/application.md (salary, why, cover letter)
-      │         ├─ fills the form, stops before submitting ──► applications/<id>/application-log.md
-      │         └─ submits after the user confirms
-      └─ main session: confirmations, data/offers.md, data/applications.md, answer bank
+      │         ├─ fills every step of the form ──► applications/<id>/application-log.md
+      │         └─ stops right before the final submit button
+      ├─ main session: relays your answers, data/offers.md, data/applications.md, answer bank
+      └─ you: review the tab and click the final submit
 ```
 
 | Step | Who does it | Why this way |
 |---|---|---|
 | 1. Search | `job-scout` subagent | Browses many pages; isolating it keeps the main session's context clean |
-| 2. Apply | `job-applier` subagent, one per offer, in parallel; orchestrated by the main session | Each offer is independent and benefits from a clean context. The main session relays the user's input (login, captcha, questions not answered by the docs, confirmation before submitting) |
+| 2. Apply | `job-applier` subagent, one per offer, in parallel (batches of up to 4); orchestrated by the main session | Each offer is independent and benefits from a clean context. The main session relays the user's input (login, captcha, questions not answered by the docs); the user clicks the final submit |
 
 ### 1. `job-scout` — search and scoring
 
@@ -43,10 +44,11 @@ A personal [Claude Code](https://claude.com/claude-code) workflow to find softwa
 3. **How it extracts the data:**
    - Uses the board's API or RSS when there is one (Remote OK, Remotive, We Work Remotely).
    - Otherwise fetches the listing with WebFetch (Get on Board, Himalayas…).
-   - If the board blocks direct access, like LinkedIn or Wellfound, it searches with `site:` in WebSearch.
+   - LinkedIn: the public search page and the guest job pages work with WebFetch (it rate-limits quickly, see `data/sources.md`). Boards that block direct access, like Wellfound, are searched with `site:` in WebSearch.
+   - Aggregators like Jobgether mislabel regions and work mode and keep closed postings, so the scout checks the original ATS posting.
    - For each candidate it opens the offer page and copies the **full** description. It never scores from the title alone.
    - When a board fails or changes its URLs, it notes that in `data/sources.md` for the next search.
-4. Applies the hard filters from `docs/preferences.md`: remote from your country, minimum salary, maximum age and in-sector. Offers that fail are marked `discarded`, with the reason.
+4. Applies the hard filters from `docs/preferences.md`: remote from your country, minimum salary, in-sector, a stack related to your experience (e.g. not Java-only), no QA roles, no mobile unless Flutter, and a 3-month cooldown per company you already applied to. Offers that fail are marked `discarded`, with the reason. Older postings aren't discarded; an age multiplier lowers their score.
 5. Computes the score with the rubric in `docs/preferences.md`:
 
    | Criterion | Weight |
@@ -86,9 +88,10 @@ Run by `job-applier` once it has read the offer and the form (or directly with `
 1. Opens the offer in its own Chrome tab with the user's sessions and gets to the form. If the posting no longer fits (closed, country, on-site), it skips it.
 2. Reads **all** the questions, then answers them:
    - Starts from `docs/answer-bank.md` and spreads the material so nothing repeats within the same application.
-   - Follows the rules in `docs/writing-style.md`: natural tone, never "0 years" and no dates per technology.
+   - Follows the rules in `docs/writing-style.md`: natural tone, never "0 years", no dates per technology, and short, friendly "why this company?" answers (the experience, how fortunate you'd feel to join, and how you could contribute — without describing the company back to them).
+   - Reuses the answers you already gave in "Reusable answers" (`docs/preferences.md`).
 3. Uploads the offer's PDF without replacing the CV in the board's profile.
-4. **Never submits without the user's confirmation**: it stops and reports to `/apply`, which asks the user and resumes it. Login, captcha or missing data work the same way. With `no-submit`, the application stays as a draft on the board.
+4. **Never clicks the final submit.** It goes through every step (some boards ask screening questions after the first page), stops right before the submit button and reports to `/apply`. The user answers what's missing, reviews the tab and clicks submit themselves; Claude Code's permission check blocks that click for agents anyway. Login, captcha or missing data work the same way: `/apply` asks the user and resumes the same agent. With `no-submit`, the application stays as a draft on the board.
 5. Records the literal questions with their answers in `application-log.md` and proposes new answers; `/apply` adds them to the bank and any data the user provides to `preferences.md`, and updates `data/`.
 
 ### Offer status (`data/offers.md`)
@@ -105,7 +108,7 @@ Run by `job-applier` once it has read the offer and the form (or directly with `
 
 1. **Nothing is invented.** No skills, years, roles, metrics or answers. Reordering, selecting, omitting, rephrasing and translating what is already in `docs/` is allowed.
 2. Transferable technologies count for score and salary, but are **never claimed**: "I haven't worked with Angular, but I have with React…".
-3. Nothing is submitted without explicit confirmation.
+3. The final submit is always clicked by the user, after reviewing the filled form.
 4. Only the main session edits `data/` and the shared `docs/` files; parallel subagents only write inside their own `applications/<id>/` folder.
 5. ID documents are not stored in any file; if a form asks for one, the user is asked at that moment.
 
@@ -127,7 +130,7 @@ data/                 (not versioned)   see format below
   offers.md                             offer history
   applications.md                       global application log
 applications/         (not versioned)   one folder per offer:
-  <source>-<YYYYMMDD>-<role>/
+  <source>-<company>-<mon-dd-yyyy>-<role>/
     offer.md                            full offer, score and requirements table
     cv.md                               tailored CV content
     <Name>_CV_<Company>.pdf             final CV
@@ -262,7 +265,7 @@ Skills: <...>
 | <Angular, Vue> | <React> |
 
 ## Hard filters
-- <on-site/hybrid, country restriction, salary below minimum, older than 30 days…>
+- <on-site/hybrid, country restriction, salary below minimum, stack unrelated to your experience, company cooldown…>
 
 ## Scoring rubric (0–100)
 <weights and point tables for requirements, salary, recency and region>
@@ -335,5 +338,5 @@ If you forget, nothing breaks: `job-scout` creates `sources.md` and `offers.md`,
 | File | What it is | Template |
 |---|---|---|
 | `data/sources.md` | Job boards and how to access each one (API, RSS, WebFetch or `site:` search). The scout updates it when a board fails or it finds a new one | Ships with ~17 tested boards, focused on remote and LATAM |
-| `data/offers.md` | History of every offer seen, including discarded ones, to avoid repeats. Defines the ID format (`<source>-<YYYYMMDD>-<role>`), which is also the folder name in `applications/` | Header and empty table |
+| `data/offers.md` | History of every offer seen, including discarded ones, to avoid repeats. Defines the ID format (`<source>-<company>-<mon-dd-yyyy>-<role>`, e.g. `linkedin-deel-oct-13-2026-senior-fullstack-engineer`), which is also the folder name in `applications/` | Header and empty table |
 | `data/applications.md` | One row per application attempt; details live in `applications/<id>/application-log.md` | Header and empty table |

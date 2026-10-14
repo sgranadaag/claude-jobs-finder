@@ -20,7 +20,7 @@ Step 2 of the workflow (see `CLAUDE.md`). You orchestrate; each `job-applier` su
 
 3. Launch one `job-applier` subagent per offer, passing the ID (and "no-submit" if set). Launch them in parallel, in batches of up to 4 (they share the user's browser, one tab each).
 4. Handle each report as it arrives:
-   - `READY_TO_SUBMIT` → show the user the field summary for that offer and wait for explicit confirmation. Confirmed → resume that same agent (SendMessage to its ID) with "confirmed" plus any corrections. Not confirmed → resume it with the corrections, or tell it to leave the application as a draft. In "no-submit" mode, don't ask: record it as `draft`.
+   - `READY_TO_SUBMIT` → show the user the field summary for that offer and ask for the answers it still needs; relay those to the same agent (SendMessage to its ID). When the form is complete, the user reviews it in the agent's tab and clicks the final submit button themselves (agents and the main session don't click it: Claude Code's permission check blocks it). Then resume the agent (or read the tab yourself) to capture the confirmation. In "no-submit" mode, don't ask: record it as `draft`.
    - `BLOCKED` → tell the user what is needed (login, captcha, CV upload, pending questions). When they are done or answer, resume the same agent with that.
    - `APPLIED` / `FAILED` / `SKIPPED` → record it (next section).
    - The user says they submitted it themselves → check the agent's tab for the board's confirmation, tell the agent (if still running) to stop touching the form, log the result and close its tab, and record it as `applied`.

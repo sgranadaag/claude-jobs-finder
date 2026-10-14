@@ -9,9 +9,9 @@ Personal system for finding and applying to job offers (software engineering), r
 | Step | Entry point | Who runs it | Why |
 |------|-------------|-------------|-----|
 | 1. Search | `/find-jobs` | `job-scout` subagent | Heavy web browsing; isolated so it doesn't fill the main context |
-| 2. Apply | `/apply` | main session orchestrating one `job-applier` subagent per offer, in parallel | Each offer is independent and benefits from a clean context; the main session relays the user's input (login, captcha, questions) and confirmation before submitting |
+| 2. Apply | `/apply` | main session orchestrating one `job-applier` subagent per offer, in parallel | Each offer is independent and benefits from a clean context; the main session relays the user's input (login, captcha, questions); the user clicks the final submit |
 
-`job-applier` handles one offer end to end: it reads the posting and the form in its own Chrome tab, runs the `tailor-cv` skill to build the CV and `application.md`, fills the form and stops before submitting. `/tailor-cv <ID>` can also be run directly to prepare a single offer without applying.
+`job-applier` handles one offer end to end: it reads the posting and the form in its own Chrome tab, runs the `tailor-cv` skill to build the CV and `application.md`, fills every step of the form and stops right before the final submit button, which the user clicks. `/tailor-cv <ID>` can also be run directly to prepare a single offer without applying.
 
 ## Files
 
@@ -46,5 +46,5 @@ Personal system for finding and applying to job offers (software engineering), r
 
 1. **Invent nothing.** No skills, years, roles, metrics, certifications or answers that aren't in `docs/`. Only reordering, selecting, omitting, rephrasing and translating existing information is allowed. If something is missing, mark it `PENDING USER`.
 2. Only the main session edits the shared files (`data/offers.md`, `data/applications.md`, `docs/answer-bank.md`, `docs/preferences.md`) while subagents run in parallel; the `job-applier` instances only write inside their own `applications/<ID>/` folder and return proposed changes, to avoid write conflicts.
-3. An application is never submitted without the user's explicit confirmation.
+3. The final submit is always clicked by the user, after reviewing the filled form (agents never click it; Claude Code's permission check blocks it anyway).
 4. ID documents (national ID, passport) are not stored in any file: if a form asks for them, ask the user at that moment. `docs/`, `data/` and `applications/` are not versioned.

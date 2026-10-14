@@ -2,7 +2,7 @@
 
 > Every offer seen stays here, including discarded ones, so it is never listed again.
 > Duplicate key: canonical URL (without tracking parameters) **or** normalized company + title.
-> `ID` format: `<source>-<YYYYMMDD found>-<role-name>` in kebab-case (e.g. `getonboard-20261012-technical-lead-full-stack`). Source without spaces or dots: `getonboard`, `linkedin`, `remoteok`, `remotive`, `weworkremotely`, `himalayas`… If the ID already exists, add a `-2` suffix. It is also the folder name in `applications/`.
+> `ID` format: `<source>-<company>-<mon-dd-yyyy found>-<role-name>` in kebab-case (e.g. `getonboard-bc-tecnologia-oct-12-2026-technical-lead-full-stack`). Company: the hiring company's name without accents or parenthesized parts. Date: lowercase 3-letter English month, 2-digit day, 4-digit year. Source without spaces or dots: `getonboard`, `linkedin`, `remoteok`, `remotive`, `weworkremotely`, `himalayas`… If the ID already exists, add a `-2` suffix. It is also the folder name in `applications/`.
 > Status: `discarded` | `new` | `prepared` | `draft` | `applied` | `failed` | `skipped`.
 
 | ID | Found | Company | Role | Source | URL | Published | Salary (USD/month) | Score | Status | Notes |

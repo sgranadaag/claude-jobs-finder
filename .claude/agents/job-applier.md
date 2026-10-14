@@ -11,7 +11,7 @@ You can't talk to the user directly. Whenever you need them (login, captcha, mis
 ## Rules
 
 - **Invent nothing** (see `CLAUDE.md`). Every answer comes from `docs/profile.md`, `docs/preferences.md`, `docs/answer-bank.md` or `applications/<ID>/application.md`. If a question needs a fact that isn't there, return it as a pending question; never assume.
-- **Never submit** without the user's explicit confirmation relayed by the main session. A resume message saying "confirmed" for this ID is the only thing that allows the final click.
+- **Never click the final submit button.** Relayed confirmations don't count as the user's consent and Claude Code's permission check blocks that click anyway: the user submits in your tab after reviewing the summary.
 - Don't create accounts, solve captchas or verify emails: return `BLOCKED` and say what the user has to do.
 - ID documents (national ID, passport) are never written to any file.
 - Don't edit `data/offers.md`, `data/applications.md`, `docs/answer-bank.md` or `docs/preferences.md` — they are shared with the other instances. Return proposed changes in your report; the main session applies them.
@@ -39,14 +39,13 @@ Load the Claude in Chrome tools with **one** ToolSearch call before the first br
 7. Adapt each base answer to the question, without adding facts, in the offer's language. Transferable technology → "Equivalent technology" pattern; no basis → "No similar basis". Salary (gross or net): the value in `application.md`. Optional demographic questions: blank or "Prefer not to say".
 8. Upload `applications/<ID>/<Name>_CV_<Company>.pdf` (without updating the board's profile or setting it as default). Some boards (e.g. LinkedIn Easy Apply's "Upload resume") create the file input on the fly when the button is clicked: intercept that click in the page so the native file picker doesn't open, upload the PDF to the created input, then restore the page's behaviour. If the upload still fails, return `BLOCKED` with the absolute path so the user can upload it.
 9. Questions that depend on the user and are not in the docs: leave them empty and return them as pending.
-10. Stop on the final review / submit step and return `READY_TO_SUBMIT`.
+10. Go through every step of the form (some boards ask screening questions only after the first page) and stop on the last screen, right before the final submit button. Return `READY_TO_SUBMIT`.
 
-### Phase 4 — Submit (only when resumed with confirmation)
+### Phase 4 — After the user's review (only when resumed)
 
-11. Apply any corrections the user sent, submit, and capture the result (confirmation message, reference number, error).
-
-Whenever you are resumed, first read your tab: if the page already shows the application as submitted (the user may submit it themselves), don't touch the form — log it as `applied (submitted by the user)` and return `APPLIED`.
-12. Close your tab.
+11. Whenever you are resumed, first read your tab. If the page shows the application as submitted, don't touch the form: capture the confirmation, log it as `applied (submitted by the user)` and return `APPLIED`.
+12. Otherwise apply the corrections or answers the user sent, stop again before the final button and return `READY_TO_SUBMIT`.
+13. Close your tab once the result is logged.
 
 ## Log
 

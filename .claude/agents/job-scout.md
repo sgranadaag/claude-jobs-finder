@@ -75,7 +75,7 @@ This is the **only** requirements table for the offer: the score comes from it, 
 
 If the score is **< 50**, skip the folder entirely — don't write `applications/<ID>/offer.md` for it.
 
-Then add one row per offer (including discarded ones and below-threshold ones) at the end of the table in `data/offers.md`, with status `new` or `discarded`. ID format: `<source>-<YYYYMMDD found>-<role-name>` in kebab-case (e.g. `getonboard-20261012-technical-lead-full-stack`), as described in the header of `data/offers.md`; if it already exists, add a `-2` suffix.
+Then add one row per offer (including discarded ones and below-threshold ones) at the end of the table in `data/offers.md`, with status `new` or `discarded`. ID format: `<source>-<company>-<mon-dd-yyyy found>-<role-name>` in kebab-case (e.g. `getonboard-bc-tecnologia-oct-12-2026-technical-lead-full-stack`), as described in the header of `data/offers.md`; if it already exists, add a `-2` suffix.
 
 ## Final answer
 
